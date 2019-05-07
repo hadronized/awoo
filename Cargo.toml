@@ -1,0 +1,8 @@
+[package]
+name = "awoo"
+version = "0.1.0"
+authors = ["Dimitri Sabadie <dimitri.sabadie@ledger.fr>"]
+edition = "2018"
+
+[dependencies]
+try-guard = "0.1"
