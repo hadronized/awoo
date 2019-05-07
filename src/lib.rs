@@ -63,4 +63,44 @@ pub trait TimeGenerator {
 
   /// Reset the generator and time to their initial values.
   fn reset(&mut self);
+
+  /// Change the internal delta.
+  fn change_delta(&mut self, delta: Self::Time);
+}
+
+/// A simple generator that generates `f32` times by delta.
+struct SimpleF32TimeGenerator {
+  current: f32,
+  reset_value: f32,
+  delta: f32
+}
+
+impl TimeGenerator for SimpleF32TimeGenerator {
+  type Time = f32;
+
+  fn tick(&mut self) -> Self::Time {
+    let t = self.current;
+    self.current += self.delta;
+    t
+  }
+
+  fn untick(&mut self) -> Self::Time {
+    let t = self.current;
+    self.current -= self.delta;
+    t
+  }
+
+  fn reset(&mut self) {
+    self.current = self.reset_value
+  }
+
+  fn change_delta(&mut self, delta: Self::Time) {
+    self.delta = delta;
+  }
+}
+
+/// In the lack of a better name, I’ll call that shit Scheduler. And I’m drunk.
+pub struct Scheduler<'a, C, T, G> {
+  timeline: Timeline<'a, C, T>,
+  time_generator: G,
 }
