@@ -2,6 +2,13 @@
 name = "awoo"
 version = "0.1.0"
 authors = ["Dimitri Sabadie <dimitri.sabadie@ledger.fr>"]
+description = "Animate and schedule code."
+keywords = ["animation", "scheduling"]
+homepage = "https://github.com/phaazon/awoo"
+repository = "https://github.com/phaazon/awoo"
+documentation = "https://docs.rs/awoo"
+license = "BSD-3-Clause"
+readme = "README.md"
 edition = "2018"
 
 [dependencies]
