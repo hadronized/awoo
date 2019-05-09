@@ -187,4 +187,8 @@ impl<A, G> Scheduler<A, G> where G: TimeGenerator {
     let t = self.time_generator.current();
     self.tracks.iter().map(move |tr| tr.active(t)).flatten()
   }
+
+  pub fn advance(&mut self) {
+    self.time_generator.tick();
+  }
 }
