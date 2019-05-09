@@ -8,20 +8,23 @@
 
 #![feature(try_trait)]
 
+use std::cmp::Ordering;
 use std::ops::Sub;
+use std::rc::Rc;
 use try_guard::guard;
 
 /// A behavior that gives values of type `A` varying over time `T`.
 ///
 /// A behavior is just whatever function that can provide a value at any time of `T`.
-pub struct Behavior<'a, T, A> {
-  behavior: Box<'a + Fn(T) -> Option<A>>
+#[derive(Clone)]
+pub struct Behavior<T, A> {
+  behavior: Rc<Fn(T) -> Option<A>>
 }
 
-impl<'a, T, A> Behavior<'a, T, A> {
-  pub fn from_fn<F>(f: F) -> Self where F: 'a + Fn(T) -> Option<A> {
+impl<T, A> Behavior<T, A> {
+  pub fn from_fn<F>(f: F) -> Self where F: 'static + Fn(T) -> Option<A> {
     Behavior {
-      behavior: Box::new(f)
+      behavior: Rc::new(f)
     }
   }
 
@@ -39,35 +42,73 @@ impl<'a, T, A> Behavior<'a, T, A> {
 /// A cut also embed transactions. Basically, it’s possible that several cuts are triggered at the
 /// same time. In that case, each cut contains some additional information about how to deal with
 /// such overlapping.
-pub struct Cut<'a, T, A> {
+#[derive(Clone)]
+pub struct Cut<T, A> {
   /// The behavior the cut refers to.
-  pub behavior: &'a Behavior<'a, T, A>,
+  pub behavior: Behavior<T, A>,
   /// Time (including) at which the cut starts in the behavior.
   pub start_t: T,
   /// Time (including) at which the cut stops in the behavior.
   pub stop_t: T,
 }
 
-impl<'a, T, A> Cut<'a, T, A> {
-  fn new(behavior: &'a Behavior<'a, T, A>, start_t: T, stop_t: T) -> Option<Self> where T: PartialOrd {
-    guard!(stop_t < start_t);
+impl< T, A> Cut<T, A> {
+  pub fn new(start_t: T, stop_t: T, behavior: Behavior<T, A>) -> Option<Self> where T: PartialOrd {
+    guard!(start_t <= stop_t);
 
     Some(Cut { behavior, start_t, stop_t })
   }
 
-  fn dur(&self) -> T where T: Copy + Sub<T, Output = T> {
+  pub fn dur(&self) -> T where T: Copy + Sub<T, Output = T> {
     self.stop_t - self.start_t
   }
 }
 
 /// A collection of cuts.
-pub struct Track<'c, T, A> {
-  cuts: Vec<Cut<'c, T, A>>
+#[derive(Clone)]
+pub struct Track<T, A> {
+  // Cuts, sorted by start time
+  cuts: Vec<Cut<T, A>>
+}
+
+impl<T, A> Track<T, A> {
+  /// Create a new track.
+  ///
+  /// This will fail if two cuts overlap. In such a situation, move one cut to another track.
+  pub fn new<C>(cuts: C) -> Option<Self> where C: Into<Vec<Cut<T, A>>>, T: PartialOrd {
+    let mut cuts = cuts.into();
+
+    cuts.sort_by(|a, b| a.start_t.partial_cmp(&b.start_t).unwrap_or(Ordering::Less));
+
+    // ensure there’s no overlapping
+    let overlapping = cuts.iter().zip(cuts.iter().skip(1)).any(|(a, b)| b.start_t < a.stop_t);
+    guard!(!overlapping);
+
+    Some(Track { cuts })
+  }
+
+  /// Return the currently active cut at a given time, if any.
+  pub fn active(&self, t: T) -> Option<&Cut<T, A>> where T: PartialOrd {
+    let x = self.cuts.binary_search_by(|cut| {
+      match cut.start_t.partial_cmp(&t).unwrap_or(Ordering::Less) {
+        Ordering::Equal => Ordering::Equal,
+        Ordering::Greater => Ordering::Greater,
+
+        Ordering::Less => match t.partial_cmp(&cut.stop_t).unwrap_or(Ordering::Less) {
+          Ordering::Less | Ordering::Equal => Ordering::Equal,
+          Ordering::Greater => Ordering::Less
+        }
+      }
+    }).ok()?;
+
+    self.cuts.get(x)
+  }
 }
 
 /// A collection of tracks.
-pub struct Timeline<'c, T, A> {
-  tracks: Vec<Track<'c, T, A>>
+#[derive(Clone)]
+pub struct Timeline<T, A> {
+  tracks: Vec<Track<T, A>>
 }
 
 /// A type that can generate time when asked.
@@ -129,7 +170,23 @@ impl TimeGenerator for SimpleF32TimeGenerator {
 }
 
 /// In the lack of a better name, I’ll call that shit Scheduler. And I’m drunk.
-pub struct Scheduler<'a, T, A, G> {
-  timeline: Timeline<'a, T, A>,
-  time_generator: G,
+#[derive(Clone)]
+pub struct Scheduler<T, A, G> {
+  pub timeline: Timeline<T, A>,
+  pub time_generator: G,
+}
+
+impl<T, A, G> Scheduler<T, A, G> {
+  pub fn new(timeline: Timeline<T, A>, time_generator: G) -> Self {
+    Scheduler { timeline, time_generator }
+  }
+}
+
+impl<T, A, G> Iterator for Scheduler<T, A, G> where G: TimeGenerator {
+  type Item = A;
+
+  fn next(&mut self) -> Option<Self::Item> {
+    let t = self.time_generator.tick();
+    unimplemented!()
+  }
 }
