@@ -88,10 +88,20 @@ pub trait TimeGenerator {
 }
 
 /// A simple generator that generates `f32` times by delta.
-struct SimpleF32TimeGenerator {
+pub struct SimpleF32TimeGenerator {
   current: f32,
   reset_value: f32,
   delta: f32
+}
+
+impl SimpleF32TimeGenerator {
+  pub fn new(reset_value: f32, delta: f32) -> Self {
+    SimpleF32TimeGenerator {
+      current: reset_value,
+      reset_value,
+      delta
+    }
+  }
 }
 
 impl TimeGenerator for SimpleF32TimeGenerator {
