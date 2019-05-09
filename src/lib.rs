@@ -11,44 +11,63 @@
 use std::ops::Sub;
 use try_guard::guard;
 
-/// A cut in a clip (`C`) at given time (`T`).
+/// A behavior that gives values of type `A` varying over time `T`.
 ///
-/// Cuts represent slice to clips, identified by the `C` type variable, with a given start and
+/// A behavior is just whatever function that can provide a value at any time of `T`.
+pub struct Behavior<'a, T, A> {
+  behavior: Box<'a + Fn(T) -> Option<A>>
+}
+
+impl<'a, T, A> Behavior<'a, T, A> {
+  pub fn from_fn<F>(f: F) -> Self where F: 'a + Fn(T) -> Option<A> {
+    Behavior {
+      behavior: Box::new(f)
+    }
+  }
+
+  pub fn react(&self, t: T) -> Option<A> {
+    (self.behavior)(t)
+  }
+}
+
+/// A cut in a behavior at given time (`T`).
+///
+/// Cuts represent slice to behaviors, identified by the `C` type variable, with a given start and
 /// stop times, identified by the the `T` type variable. The difference between the times gives the
 /// duration of the cut.
 ///
 /// A cut also embed transactions. Basically, it’s possible that several cuts are triggered at the
 /// same time. In that case, each cut contains some additional information about how to deal with
 /// such overlapping.
-pub struct Cut<'a, C, T> {
-  /// The clip the cut refers to.
-  pub clip: &'a C,
-  /// Time (including) at which the cut starts in the clip.
-  pub start_in: T,
-  /// Time (including) at which the cut stops in the clip.
-  pub stop_in: T,
+pub struct Cut<'a, T, A> {
+  /// The behavior the cut refers to.
+  pub behavior: &'a Behavior<'a, T, A>,
+  /// Time (including) at which the cut starts in the behavior.
+  pub start_t: T,
+  /// Time (including) at which the cut stops in the behavior.
+  pub stop_t: T,
 }
 
-impl<'a, C, T> Cut<'a, C, T> {
-  fn new(clip: &'a C, start_in: T, stop_in: T) -> Option<Self> where T: PartialOrd {
-    guard!(stop_in < start_in);
+impl<'a, T, A> Cut<'a, T, A> {
+  fn new(behavior: &'a Behavior<'a, T, A>, start_t: T, stop_t: T) -> Option<Self> where T: PartialOrd {
+    guard!(stop_t < start_t);
 
-    Some(Cut { clip, start_in, stop_in })
+    Some(Cut { behavior, start_t, stop_t })
   }
 
   fn dur(&self) -> T where T: Copy + Sub<T, Output = T> {
-    self.stop_in - self.start_in
+    self.stop_t - self.start_t
   }
 }
 
 /// A collection of cuts.
-pub struct Track<'c, C, T> {
-  cuts: Vec<Cut<'c, C, T>>
+pub struct Track<'c, T, A> {
+  cuts: Vec<Cut<'c, T, A>>
 }
 
 /// A collection of tracks.
-pub struct Timeline<'c, C, T> {
-  tracks: Vec<Track<'c, C, T>>
+pub struct Timeline<'c, T, A> {
+  tracks: Vec<Track<'c, T, A>>
 }
 
 /// A type that can generate time when asked.
@@ -100,7 +119,7 @@ impl TimeGenerator for SimpleF32TimeGenerator {
 }
 
 /// In the lack of a better name, I’ll call that shit Scheduler. And I’m drunk.
-pub struct Scheduler<'a, C, T, G> {
-  timeline: Timeline<'a, C, T>,
+pub struct Scheduler<'a, T, A, G> {
+  timeline: Timeline<'a, T, A>,
   time_generator: G,
 }
