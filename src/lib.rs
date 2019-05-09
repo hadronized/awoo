@@ -105,15 +105,12 @@ impl<T, A> Track<T, A> {
   }
 }
 
-/// A collection of tracks.
-#[derive(Clone)]
-pub struct Timeline<T, A> {
-  tracks: Vec<Track<T, A>>
-}
-
 /// A type that can generate time when asked.
 pub trait TimeGenerator {
-  type Time;
+  type Time: PartialOrd + Copy;
+
+  /// Get the current time.
+  fn current(&self) -> Self::Time;
 
   /// Tick time forward.
   fn tick(&mut self) -> Self::Time;
@@ -148,6 +145,10 @@ impl SimpleF32TimeGenerator {
 impl TimeGenerator for SimpleF32TimeGenerator {
   type Time = f32;
 
+  fn current(&self) -> Self::Time {
+    self.current
+  }
+
   fn tick(&mut self) -> Self::Time {
     let t = self.current;
     self.current += self.delta;
@@ -171,22 +172,19 @@ impl TimeGenerator for SimpleF32TimeGenerator {
 
 /// In the lack of a better name, I’ll call that shit Scheduler. And I’m drunk.
 #[derive(Clone)]
-pub struct Scheduler<T, A, G> {
-  pub timeline: Timeline<T, A>,
+pub struct Scheduler<A, G> where G: TimeGenerator {
+  pub tracks: Vec<Track<G::Time, A>>,
   pub time_generator: G,
 }
 
-impl<T, A, G> Scheduler<T, A, G> {
-  pub fn new(timeline: Timeline<T, A>, time_generator: G) -> Self {
-    Scheduler { timeline, time_generator }
+impl<A, G> Scheduler<A, G> where G: TimeGenerator {
+  pub fn new<X>(tracks: X, time_generator: G) -> Self where X: Into<Vec<Track<G::Time, A>>> {
+    let tracks = tracks.into();
+    Scheduler { tracks, time_generator }
   }
-}
 
-impl<T, A, G> Iterator for Scheduler<T, A, G> where G: TimeGenerator {
-  type Item = A;
-
-  fn next(&mut self) -> Option<Self::Item> {
-    let t = self.time_generator.tick();
-    unimplemented!()
+  pub fn active_cuts<'a>(&'a self) -> impl Iterator<Item = &'a Cut<G::Time, A>> + 'a {
+    let t = self.time_generator.current();
+    self.tracks.iter().map(move |tr| tr.active(t)).flatten()
   }
 }
