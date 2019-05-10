@@ -83,31 +83,10 @@ impl< T, A> Cut<T, A> {
   }
 
   /// React with blending with another cut.
-  ///
-  /// The following table explains what happens when two cuts get activated at the same time. It
-  /// shows what is the resulting cut regarding the state of the two cuts and whether the first
-  /// cuts has a blending function.
-  ///
-  /// > Note: The second cut’s blending function is considered for blending but not the first’s one.
-  ///
-  /// | `value`    | `cut1`    | `cut1.blending` | Result                                |
-  /// | ========= | ========= | =============== | ===================================== |
-  /// | `None`    | `None`    | `None`          | `None`                                |
-  /// | `None`    | `None`    | `Some(_)`       | `None`                                |
-  /// | `None`    | `Some(_)` | `None`          | `cut1.react(t)`                       |
-  /// | `None`    | `Some(_)` | `Some(_)`       | `cut1.react(t)`                       |
-  /// | `Some(_)` | `None`    | `None`          | `value`                               |
-  /// | `Some(_)` | `None`    | `Some(_)`       | `value`       `                       |
-  /// | `Some(_)` | `Some(_)` | `None`          | `value`                               |
-  /// | `Some(_)` | `Some(_)` | `Some(_)`       | `blend(value, cut1.react(t)*)`        |
-  ///
-  /// The blending can also fail if any cut fail to compute a value at a given time, in which case
-  /// the other cut’s value is returned.
-  pub fn react_blend(value: Option<A>, b: Option<&Self>, t: T) -> Option<A> where T: Copy {
-    match (value, b) {
-      (None, _) => b.and_then(|b| b.react(t)),
-      (Some(a), None) => Some(a),
-      (Some(a), Some(b)) => {
+  pub fn react_blend(value: Option<A>, b: &Self, t: T) -> Option<A> where T: Copy {
+    match value {
+      None => b.react(t),
+      Some(a) => {
         match b.blending {
           None => Some(a),
           Some(ref blending) => {
@@ -240,18 +219,20 @@ impl<A, G> Scheduler<A, G> where G: TimeGenerator {
     Scheduler { tracks, time_generator }
   }
 
-  pub fn active_cuts<'a>(&'a self) -> impl Iterator<Item = &'a Cut<G::Time, A>> + 'a {
-    let t = self.time_generator.current();
+  pub fn active_cuts<'a>(&'a self, t: G::Time) -> impl Iterator<Item = &'a Cut<G::Time, A>> + 'a {
     self.tracks.iter().map(move |tr| tr.active(t)).flatten()
   }
 
-  //pub fn next(&mut self) -> Option<A> {
-  //  let mut cuts = self.active_cuts();
-  //  let first_cut = cuts.next()?;
-  //  let mut value = None;
+  pub fn next(&mut self) -> Option<A> {
+    let t = self.time_generator.tick();
+    let mut cuts = self.active_cuts(t);
+    let first_cut = cuts.next()?;
+    let mut value = first_cut.react(t);
 
-  //  for cut in cuts {
-  //    value = value.orsss
-  //  }
-  //}
+    for cut in cuts {
+      value = Cut::react_blend(value, cut, t);
+    }
+
+    value
+  }
 }
