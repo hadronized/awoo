@@ -33,16 +33,27 @@ impl<T, A> Behavior<T, A> {
   }
 }
 
+/// Blend two `A` to form a new one.
+pub struct Blend<A> {
+  blend_f: Box<Fn(&A, &A) -> A>
+}
+
+impl<A> Blend<A> {
+  pub fn blend(&self, a: &A, b: &A) -> A {
+    (self.blend_f)(a, b)
+  }
+}
+
 /// A cut in a behavior at given time (`T`).
 ///
 /// Cuts represent slice to behaviors, identified by the `C` type variable, with a given start and
 /// stop times, identified by the the `T` type variable. The difference between the times gives the
 /// duration of the cut.
 ///
-/// A cut also embed transactions. Basically, it’s possible that several cuts are triggered at the
-/// same time. In that case, each cut contains some additional information about how to deal with
-/// such overlapping.
-#[derive(Clone)]
+/// A cut also embeds a special object that is responsible in _blending_ cuts. Each cut’s blending
+/// object is responsible to blend the current cut and the very next one active at the next time.
+/// So if two cuts `cut0` and `cut1` are active at the same time, `cut1`’s blending function will be
+/// used to blend `cut1` and `cut2`, and `cut2`’s blending function is ignored in this situation.
 pub struct Cut<T, A> {
   /// The behavior the cut refers to.
   pub behavior: Behavior<T, A>,
@@ -50,22 +61,74 @@ pub struct Cut<T, A> {
   pub start_t: T,
   /// Time (including) at which the cut stops in the behavior.
   pub stop_t: T,
+  /// The blending function.
+  pub blending: Option<Blend<A>>
 }
 
 impl< T, A> Cut<T, A> {
   pub fn new(start_t: T, stop_t: T, behavior: Behavior<T, A>) -> Option<Self> where T: PartialOrd {
     guard!(start_t <= stop_t);
 
-    Some(Cut { behavior, start_t, stop_t })
+    let blending = None;
+
+    Some(Cut { behavior, start_t, stop_t, blending })
   }
 
   pub fn dur(&self) -> T where T: Copy + Sub<T, Output = T> {
     self.stop_t - self.start_t
   }
+
+  pub fn react(&self, t: T) -> Option<A> {
+    self.behavior.react(t)
+  }
+
+  /// React with blending with another cut.
+  ///
+  /// The following table explains what happens when two cuts get activated at the same time. It
+  /// shows what is the resulting cut regarding the state of the two cuts and whether the first
+  /// cuts has a blending function.
+  ///
+  /// > Note: The first cut’s blending function is considered for blending but not the second’s one.
+  ///
+  /// | `cut0`    | `cut1`    | `cut1.blending` | Result                                |
+  /// | ========= | ========= | =============== | ===================================== |
+  /// | `None`    | `None`    | `None`          | `None`                                |
+  /// | `None`    | `None`    | `Some(_)`       | `None`                                |
+  /// | `None`    | `Some(_)` | `None`          | `cut1.react(t)`                       |
+  /// | `None`    | `Some(_)` | `Some(_)`       | `cut1.react(t)`                       |
+  /// | `Some(_)` | `None`    | `None`          | `cut0.react(t)`                       |
+  /// | `Some(_)` | `None`    | `Some(_)`       | `cut0.react(t)`                       |
+  /// | `Some(_)` | `Some(_)` | `None`          | `cut1.react(t)`                       |
+  /// | `Some(_)` | `Some(_)` | `Some(_)`       | `blend(cut0.react(t), cut1.react(t))` |
+  ///
+  /// The blending can also fail if any cut cannot compute a value at a given time. If it’s the
+  /// case, the other cut’s value is returned.
+  pub fn react_blend(a: Option<&Self>, b: Option<&Self>, t: T) -> Option<A> where T: Copy {
+    match (a, b) {
+      (None, None) => None,
+      (Some(a), None) => a.react(t),
+      (None, Some(b)) => b.react(t),
+      (Some(a), Some(b)) => {
+        match b.blending {
+          None => b.react(t),
+          Some(ref blending) => {
+            if let Some(a_result) = a.react(t) {
+              if let Some(b_result) = b.react(t) {
+                Some(blending.blend(&a_result, &b_result))
+              } else {
+                Some(a_result)
+              }
+            } else {
+              b.react(t)
+            }
+          }
+        }
+      }
+    }
+  }
 }
 
 /// A collection of cuts.
-#[derive(Clone)]
 pub struct Track<T, A> {
   // Cuts, sorted by start time
   cuts: Vec<Cut<T, A>>
@@ -171,7 +234,6 @@ impl TimeGenerator for SimpleF32TimeGenerator {
 }
 
 /// In the lack of a better name, I’ll call that shit Scheduler. And I’m drunk.
-#[derive(Clone)]
 pub struct Scheduler<A, G> where G: TimeGenerator {
   pub tracks: Vec<Track<G::Time, A>>,
   pub time_generator: G,
@@ -187,6 +249,16 @@ impl<A, G> Scheduler<A, G> where G: TimeGenerator {
     let t = self.time_generator.current();
     self.tracks.iter().map(move |tr| tr.active(t)).flatten()
   }
+
+  //pub fn foo(&self) -> Option<impl Iterator<Item = A>> {
+  //  let mut cuts = self.active_cuts();
+  //  let first_cut = cuts.next()?;
+  //  let first_value = cut.
+
+  //  cuts.fold(first,
+
+  //  })
+  //}
 
   pub fn advance(&mut self) {
     self.time_generator.tick();
