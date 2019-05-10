@@ -219,7 +219,7 @@ impl<A, G> Scheduler<A, G> where G: TimeGenerator {
     Scheduler { tracks, time_generator }
   }
 
-  pub fn active_cuts<'a>(&'a self, t: G::Time) -> impl Iterator<Item = &'a Cut<G::Time, A>> + 'a {
+  fn active_cuts<'a>(&'a self, t: G::Time) -> impl Iterator<Item = &'a Cut<G::Time, A>> + 'a {
     self.tracks.iter().map(move |tr| tr.active(t)).flatten()
   }
 
