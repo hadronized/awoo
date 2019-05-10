@@ -101,8 +101,8 @@ impl< T, A> Cut<T, A> {
   /// | `Some(_)` | `Some(_)` | `None`          | `cut1.react(t)`                       |
   /// | `Some(_)` | `Some(_)` | `Some(_)`       | `blend(cut0.react(t), cut1.react(t))` |
   ///
-  /// The blending can also fail if any cut cannot compute a value at a given time. If it’s the
-  /// case, the other cut’s value is returned.
+  /// The blending can also fail if any cut fail to compute a value at a given time, in which case
+  /// the other cut’s value is returned.
   pub fn react_blend(a: Option<&Self>, b: Option<&Self>, t: T) -> Option<A> where T: Copy {
     match (a, b) {
       (None, None) => None,
