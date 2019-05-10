@@ -226,13 +226,11 @@ impl<A, G> Scheduler<A, G> where G: TimeGenerator {
   pub fn next(&mut self) -> Option<A> {
     let t = self.time_generator.tick();
     let mut cuts = self.active_cuts(t);
-    let first_cut = cuts.next()?;
-    let mut value = first_cut.react(t);
 
-    for cut in cuts {
-      value = Cut::react_blend(value, cut, t);
-    }
-
-    value
+    cuts.next().and_then(move |first_cut| {
+      cuts.fold(first_cut.react(t), |value, cut| {
+        Cut::react_blend(value, cut, t)
+      })
+    })
   }
 }
