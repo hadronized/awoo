@@ -88,38 +88,33 @@ impl< T, A> Cut<T, A> {
   /// shows what is the resulting cut regarding the state of the two cuts and whether the first
   /// cuts has a blending function.
   ///
-  /// > Note: The first cut’s blending function is considered for blending but not the second’s one.
+  /// > Note: The second cut’s blending function is considered for blending but not the first’s one.
   ///
-  /// | `cut0`    | `cut1`    | `cut1.blending` | Result                                |
+  /// | `value`    | `cut1`    | `cut1.blending` | Result                                |
   /// | ========= | ========= | =============== | ===================================== |
   /// | `None`    | `None`    | `None`          | `None`                                |
   /// | `None`    | `None`    | `Some(_)`       | `None`                                |
   /// | `None`    | `Some(_)` | `None`          | `cut1.react(t)`                       |
   /// | `None`    | `Some(_)` | `Some(_)`       | `cut1.react(t)`                       |
-  /// | `Some(_)` | `None`    | `None`          | `cut0.react(t)`                       |
-  /// | `Some(_)` | `None`    | `Some(_)`       | `cut0.react(t)`                       |
-  /// | `Some(_)` | `Some(_)` | `None`          | `cut1.react(t)`                       |
-  /// | `Some(_)` | `Some(_)` | `Some(_)`       | `blend(cut0.react(t), cut1.react(t))` |
+  /// | `Some(_)` | `None`    | `None`          | `value`                               |
+  /// | `Some(_)` | `None`    | `Some(_)`       | `value`       `                       |
+  /// | `Some(_)` | `Some(_)` | `None`          | `value`                               |
+  /// | `Some(_)` | `Some(_)` | `Some(_)`       | `blend(value, cut1.react(t)*)`        |
   ///
   /// The blending can also fail if any cut fail to compute a value at a given time, in which case
   /// the other cut’s value is returned.
-  pub fn react_blend(a: Option<&Self>, b: Option<&Self>, t: T) -> Option<A> where T: Copy {
-    match (a, b) {
-      (None, None) => None,
-      (Some(a), None) => a.react(t),
-      (None, Some(b)) => b.react(t),
+  pub fn react_blend(value: Option<A>, b: Option<&Self>, t: T) -> Option<A> where T: Copy {
+    match (value, b) {
+      (None, _) => b.and_then(|b| b.react(t)),
+      (Some(a), None) => Some(a),
       (Some(a), Some(b)) => {
         match b.blending {
-          None => b.react(t),
+          None => Some(a),
           Some(ref blending) => {
-            if let Some(a_result) = a.react(t) {
-              if let Some(b_result) = b.react(t) {
-                Some(blending.blend(&a_result, &b_result))
-              } else {
-                Some(a_result)
-              }
+            if let Some(b_result) = b.react(t) {
+              Some(blending.blend(&a, &b_result))
             } else {
-              b.react(t)
+             Some(a)
             }
           }
         }
@@ -250,17 +245,13 @@ impl<A, G> Scheduler<A, G> where G: TimeGenerator {
     self.tracks.iter().map(move |tr| tr.active(t)).flatten()
   }
 
-  //pub fn foo(&self) -> Option<impl Iterator<Item = A>> {
+  //pub fn next(&mut self) -> Option<A> {
   //  let mut cuts = self.active_cuts();
   //  let first_cut = cuts.next()?;
-  //  let first_value = cut.
+  //  let mut value = None;
 
-  //  cuts.fold(first,
-
-  //  })
+  //  for cut in cuts {
+  //    value = value.orsss
+  //  }
   //}
-
-  pub fn advance(&mut self) {
-    self.time_generator.tick();
-  }
 }
