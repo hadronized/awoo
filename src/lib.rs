@@ -223,7 +223,7 @@ impl<A, G> Scheduler<A, G> where G: TimeGenerator {
     self.tracks.iter().map(move |tr| tr.active(t)).flatten()
   }
 
-  pub fn next(&mut self) -> Option<A> {
+  pub fn next_value(&mut self) -> Option<A> {
     let t = self.time_generator.tick();
     let mut cuts = self.active_cuts(t);
 
@@ -232,5 +232,13 @@ impl<A, G> Scheduler<A, G> where G: TimeGenerator {
         Cut::react_blend(value, cut, t)
       })
     })
+  }
+}
+
+impl<A, G> Iterator for Scheduler<A, G> where G: TimeGenerator {
+  type Item = A;
+
+  fn next(&mut self) -> Option<Self::Item> {
+    self.next_value()
   }
 }
