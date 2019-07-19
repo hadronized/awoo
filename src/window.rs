@@ -15,7 +15,7 @@ impl<T> Window<T> {
     }
   }
 
-  pub fn map<'a, F>(self, f: F) -> MappedWindow<'a, T> where F: Fn(T) + 'a {
+  pub fn map<'a, F>(self, f: F) -> MappedWindow<'a, T> where F: FnMut(T) + 'a {
     MappedWindow {
       window: self,
       carry: Box::new(f)
@@ -25,5 +25,5 @@ impl<T> Window<T> {
 
 pub struct MappedWindow<'a, T> {
   pub window: Window<T>,
-  pub carry: Box<dyn Fn(T) + 'a>
+  pub carry: Box<dyn FnMut(T) + 'a>
 }
