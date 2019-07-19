@@ -11,5 +11,10 @@ license = "BSD-3-Clause"
 readme = "README.md"
 edition = "2018"
 
+[features]
+default = ["json"]
+json = ["serde"]
+
 [dependencies]
 try-guard = "0.1"
+serde = { version = "1", features = ["derive"], optional = true }
