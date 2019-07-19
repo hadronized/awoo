@@ -18,3 +18,6 @@ json = ["serde"]
 [dependencies]
 try-guard = "0.1"
 serde = { version = "1", features = ["derive"], optional = true }
+
+[dev-dependencies]
+serde_json = { version = "1" }
