@@ -1,0 +1,21 @@
+language: rust
+
+cache: cargo
+
+rust:
+  - stable
+  - beta
+  - nightly
+
+os:
+  - linux
+  - osx
+
+script:
+  - rustc --version
+  - cargo --version
+  # needed to test READMEs
+  - cargo install cargo-sync-readme --force
+  - cargo build --verbose
+  - cargo test --verbose
+  - if [ "$TRAVIS_OS_NAME" == "windows" ]; then cargo sync-readme -c -f bin --crlf; else cargo sync-readme -c -f bin; fi

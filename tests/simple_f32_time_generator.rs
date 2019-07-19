@@ -1,4 +1,5 @@
-use awoo::{SimpleF32TimeGenerator, TimeGenerator};
+use awoo::time::TimeGenerator;
+use awoo::time::simple::SimpleF32TimeGenerator;
 
 // f32 equality test
 #[inline]
