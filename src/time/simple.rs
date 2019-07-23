@@ -1,6 +1,13 @@
+//! The simple floating, 32-bit time generator.
+
 use crate::time::TimeGenerator;
 
 /// A simple [`TimeGenerator`] that generates `f32` times.
+///
+/// You can create one by giving it its initial state (typically `0.`) and a delta. For instance,
+/// for a video game that runs at 100 Hz, you want a delta set to 0.01, because you need to generate
+/// a frame every 10ms. If the framerate drops, you can change the value of the delta parameter to
+/// adapt.
 pub struct SimpleF32TimeGenerator {
   current: f32,
   reset_value: f32,
