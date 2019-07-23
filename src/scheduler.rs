@@ -1,14 +1,15 @@
-//! Schedulers implementations.
+//! Scheduler implementations.
 //!
 //! Schedulers are used to order and schedule [`MappedWindow`]s by using a [`TimeGenerator`]. You
 //! typically create a scheduler along with a time generator and a list ([`Vec`]) of time windows.
-//! Note that it’s possible that the creation of scheduler fails because of the time windows. For
+//! Note that it’s possible that the creation of a scheduler fails because of the time windows. For
 //! instance, overlapping time windows are forbidden.
 //!
 //! Once the scheduler created, you can use it to schedule the mapped action in the windows.
 //!
 //! [`MappedWindow`]: crate::window::MappedWindow
 //! [`TimeGenerator`]: crate::time::TimeGenerator
+
 use std::cmp::Ordering;
 use try_guard::guard;
 
