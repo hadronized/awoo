@@ -16,7 +16,7 @@ default = ["json"]
 json = ["serde"]
 
 [dependencies]
-try-guard = "0.1"
+try-guard = "0.2"
 serde = { version = "1", features = ["derive"], optional = true }
 
 [dev-dependencies]

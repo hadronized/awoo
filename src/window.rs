@@ -45,5 +45,5 @@ impl<T> Window<T> {
 pub struct MappedWindow<'a, T> {
   /// Window into which execute an action.
   pub window: Window<T>,
-  carry: Box<dyn FnMut(T) + 'a>
+  pub(crate) carry: Box<dyn FnMut(T) + 'a>
 }
