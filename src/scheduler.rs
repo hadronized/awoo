@@ -1,15 +1,42 @@
+//! Schedulers implementations.
+//!
+//! Schedulers are used to order and schedule [`MappedWindow`]s by using a [`TimeGenerator`]. You
+//! typically create a scheduler along with a time generator and a list ([`Vec`]) of time windows.
+//! Note that it’s possible that the creation of scheduler fails because of the time windows. For
+//! instance, overlapping time windows are forbidden.
+//!
+//! Once the scheduler created, you can use it to schedule the mapped action in the windows.
+//!
+//! [`MappedWindow`]: crate::window::MappedWindow
+//! [`TimeGenerator`]: crate::time::TimeGenerator
 use std::cmp::Ordering;
 use try_guard::guard;
 
 use crate::time::TimeGenerator;
 use crate::window::MappedWindow;
 
+/// A random-access scheduler.
+///
+/// A random-access scheduler gives you an interesting property: given any time, it will perform
+/// resolution of the action to use based on the logarithm of the number of windows being scheduled.
+/// That gives good performance for someone who is constantly changing time without ticking or
+/// unticking with a small delta.
+///
+/// On the opposite hand, if you don’t need that random-access property, then a sequential
+/// scheduler will make a way better job for you (it will give you a _O(1)_ runtime performance
+/// instead of _O(log N)_).
+///
+/// > Note: if you use a sequential scheduler by doing random-accesses, you are basically ruining
+/// > the initial concept of a sequential scheduler (it will run in _O(N)_ at worst).
 pub struct RandomAccessScheduler<'a, G> where G: TimeGenerator {
   time_gen: G,
   windows: Vec<MappedWindow<'a, G::Time>>,
 }
 
 impl<'a, G> RandomAccessScheduler<'a, G> where G: TimeGenerator {
+  /// Create a new random-access scheduler.
+  ///
+  /// This function might fail if the time windows are overlapping.
   pub fn new<W>(
     time_gen: G,
     windows: W
@@ -42,6 +69,7 @@ impl<'a, G> RandomAccessScheduler<'a, G> where G: TimeGenerator {
     }).ok()
   }
 
+  /// Schedule the mapped windows.
   pub fn schedule(mut self) {
     self.time_gen.reset();
     let mut t = self.time_gen.current();
@@ -65,16 +93,3 @@ impl<'a, G> RandomAccessScheduler<'a, G> where G: TimeGenerator {
     }
   }
 }
-
-/*
-
-    let mut cuts = cuts.into();
-
-    cuts.sort_by(|a, b| a.start_t.partial_cmp(&b.start_t).unwrap_or(Ordering::Less));
-
-    // ensure there’s no overlapping
-    let overlapping = cuts.iter().zip(cuts.iter().skip(1)).any(|(a, b)| b.start_t < a.stop_t);
-    guard!(!overlapping);
-
-    Some(Track { cuts })
-    */
