@@ -54,7 +54,7 @@
 //! let pre_alpha = Window::new(0., 1.).map(|time| println!("time is {}", time));
 //! ```
 //!
-//! The type of that [MappedWindow<_>] is determined by what you return from your closure in the
+//! The type of that [`MappedWindow<_>`] is determined by what you return from your closure in the
 //! `map` call. Once all windows are created, you can schedule them:
 //!
 //! ```
@@ -77,7 +77,7 @@
 //! fly.
 //!
 //! [`Window<T>`]: crate::window::Window
-//! [`MappedWindow<T>`]: crate::window::MappedWindow
+//! [`MappedWindow<_>`]: crate::window::MappedWindow
 
 pub mod scheduler;
 pub mod time;
