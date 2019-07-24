@@ -65,7 +65,7 @@
 //! # let pre_alpha = Window::new(0., 1.).map(|t| println!("pre α: {}", t));
 //! # let pre_beta = Window::new(1., 2.).map(|t| println!("pre β: {}", t));
 //! # let pre_gamma = Window::new(2., 3.).map(|t| println!("pre γ: {}", t));
-//! let scheduler = RandomAccessScheduler::new(
+//! let mut scheduler = RandomAccessScheduler::new(
 //!   SimpleF32TimeGenerator::new(0., 0.1), // a generator that generates linear time starting at 0 and incrementing by 0.1
 //!   vec![pre_alpha, pre_beta, pre_gamma] // our mapped windows
 //! ).unwrap();

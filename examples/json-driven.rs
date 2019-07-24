@@ -22,7 +22,7 @@ fn main() {
   let a = windows.get("a").unwrap().map(|t| println!("{} in a: {}", shared_resource, t));
   let b = windows.get("b").unwrap().map(|t| println!("{} in b: {}", shared_resource, t));
 
-  let scheduler =
+  let mut scheduler =
     RandomAccessScheduler::new(
       SimpleF32TimeGenerator::new(0., 1.),
       vec![a, b]

@@ -7,7 +7,7 @@ fn main() {
   let a = Window::new(0., 3.).map(|t| println!("{} in a: {}", shared_resource, t));
   let b = Window::new(3., 10.).map(|t| println!("{} in b: {}", shared_resource, t));
 
-  let scheduler =
+  let mut scheduler =
     RandomAccessScheduler::new(
       SimpleF32TimeGenerator::new(0., 1.),
       vec![a, b]
