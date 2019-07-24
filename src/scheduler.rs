@@ -32,6 +32,7 @@ use crate::window::MappedWindow;
 pub struct RandomAccessScheduler<'a, G> where G: TimeGenerator {
   time_gen: G,
   windows: Vec<MappedWindow<'a, G::Time>>,
+  interrupt: Option<Box<FnMut(G::Time) -> Interrupt + 'a>>
 }
 
 impl<'a, G> RandomAccessScheduler<'a, G> where G: TimeGenerator {
@@ -53,7 +54,11 @@ impl<'a, G> RandomAccessScheduler<'a, G> where G: TimeGenerator {
     });
     guard!(!overlapping);
 
-    Some(RandomAccessScheduler { time_gen, windows })
+    Some(RandomAccessScheduler {
+      time_gen,
+      windows,
+      interrupt: None
+    })
   }
 
   fn active_window_index(&self, t: G::Time) -> Option<usize> {
@@ -71,11 +76,17 @@ impl<'a, G> RandomAccessScheduler<'a, G> where G: TimeGenerator {
   }
 
   /// Schedule the mapped windows.
-  pub fn schedule(mut self) {
+  pub fn schedule(&mut self) {
     self.time_gen.reset();
     let mut t = self.time_gen.current();
 
     loop {
+      if let Some(ref mut interrupt) = self.interrupt {
+        if let Interrupt::Break = (interrupt)(t) {
+          break;
+        }
+      }
+
       let win_ix = self.active_window_index(t);
 
       if let Some(win_ix) = win_ix {
@@ -93,4 +104,21 @@ impl<'a, G> RandomAccessScheduler<'a, G> where G: TimeGenerator {
       }
     }
   }
+
+  /// Make the scheduler interruptible with the given function
+  ///
+  /// > Note: the function must not block and return as soon as possible.
+  pub fn interruptible_with<F>(&mut self, interrupt: F) where F: FnMut(G::Time) -> Interrupt + 'a {
+    self.interrupt = Some(Box::new(interrupt));
+  }
+}
+
+/// Interruption mechanism.
+///
+/// A scheduler has to check when an interruption has occurred. If one does, it must return from the
+/// `schedule` method and give back control-flow.
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
+pub enum Interrupt {
+  Break,
+  Continue
 }
