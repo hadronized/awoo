@@ -64,7 +64,7 @@ The type of that [`MappedWindow<_>`] is determined by what you return from your 
 use awoo::scheduler::RandomAccessScheduler;
 use awoo::time::simple::SimpleF32TimeGenerator;
 
-let scheduler = RandomAccessScheduler::new(
+let mut scheduler = RandomAccessScheduler::new(
   SimpleF32TimeGenerator::new(0., 0.1), // a generator that generates linear time starting at 0 and incrementing by 0.1
   vec![pre_alpha, pre_beta, pre_gamma] // our mapped windows
 ).unwrap();
